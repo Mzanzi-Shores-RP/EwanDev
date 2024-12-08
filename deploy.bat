@@ -36,6 +36,21 @@ set SERVER_PATH=C:\path\to\your\fivem\server  :: Replace with YOUR FiveM server 
 :: -----------------------------
 set BACKUP_PATH="C:\Users\Ewanw\Documents\backups"  :: Replace with YOUR desired folder path for backups
 
+:: -----------------------------
+:: Check if it's the first run and if the repo and path are set correctly
+:: -----------------------------
+if not exist "%SERVER_PATH%" (
+    echo 🚨 Error: FiveM server path does not exist. Please update the SERVER_PATH in the script.
+    pause
+    exit /b 1
+)
+
+if "%REPO_URL%"=="" (
+    echo 🚨 Error: GitHub repository URL is not set. Please update the REPO_URL in the script.
+    pause
+    exit /b 1
+)
+
 :: Check if the "backup" folder exists; if not, create it
 if not exist "%BACKUP_PATH%" (
     echo 🚨 The backup folder does not exist. Creating the folder...
@@ -43,7 +58,7 @@ if not exist "%BACKUP_PATH%" (
 )
 
 :: -----------------------------
-:: STEP 4: Pull the Current Files from GitHub and Store Them in the Backup Folder
+:: Pull the Current Files from GitHub and Store Them in the Backup Folder
 :: -----------------------------
 echo Pulling the current files from the GitHub repository into the backup folder...
 cd /d "%SERVER_PATH%"  :: Navigate to your FiveM server folder
@@ -57,6 +72,20 @@ if %errorlevel% neq 0 (
     echo 🚨 Error: Git is not installed. Please install Git from https://git-scm.com/download/win
     pause
     exit /b 1
+)
+
+:: -----------------------------
+:: Generate the .exe file after first run (using Bat To Exe Converter)
+:: -----------------------------
+:: Check if Bat To Exe Converter is available on the system
+whereis "Bat To Exe Converter" >nul 2>nul
+if %errorlevel%==0 (
+    echo 🛠️ Generating .exe file for future use...
+    "C:\Path\To\BatToExeConverter\BatToExeConverter.exe" "%~f0" "%~dp0\FiveMUpdate.exe"
+    echo ✅ The .exe file has been generated as FiveMUpdate.exe.
+) else (
+    echo 🚨 Error: Bat To Exe Converter is not installed. You need to install it to automatically generate an .exe.
+    echo Alternatively, you can manually convert this batch file to an .exe using a tool like Bat To Exe Converter.
 )
 
 :: Infinite loop to keep checking for updates every minute (or any other interval)
