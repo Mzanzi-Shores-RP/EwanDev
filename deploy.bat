@@ -33,7 +33,30 @@ if %errorlevel% neq 0 (
 )
 
 :: -----------------------------
-:: STEP 4: Set Up the GitHub Repository Locally (Clone the Repo)
+:: STEP 4: Create Backup Folder if First Run
+:: -----------------------------
+set BACKUP_PATH=%SERVER_PATH%\Backup
+if not exist "%BACKUP_PATH%" (
+    echo 🚨 First time running the script, creating backup folder...
+    for /f "tokens=3" %%a in ('wmic logicaldisk get size^,caption ^| findstr /c:"\\"') do (
+        set DRIVE=%%a
+        goto :found_drive
+    )
+    :found_drive
+    echo Creating backup folder on %DRIVE%\Backup
+    mkdir "%DRIVE%\Backup"
+    echo Backing up server files...
+    xcopy "%SERVER_PATH%" "%DRIVE%\Backup" /E /H /C /I
+    if %errorlevel% neq 0 (
+        echo 🚨 Error creating backup. Please ensure you have write permissions on the drive.
+        pause
+        exit /b 1
+    )
+    echo ✅ Backup completed successfully.
+)
+
+:: -----------------------------
+:: STEP 5: Set Up the GitHub Repository Locally (Clone the Repo)
 :: -----------------------------
 echo Checking if the repository is already cloned...
 cd /d "%SERVER_PATH%"
@@ -52,7 +75,7 @@ if exist ".git" (
 )
 
 :: -----------------------------
-:: STEP 5: Add, Commit, and Push the Server Files to GitHub
+:: STEP 6: Upload the Current Server Files to GitHub
 :: -----------------------------
 echo Adding current server files to Git...
 git add .  :: Stage all files for commit
@@ -70,7 +93,7 @@ if %errorlevel% neq 0 (
     echo ✅ Committed changes.
 
     echo Pushing changes to GitHub...
-    git push origin main  :: Push to the main branch (you can change this if using a different branch)
+    git push origin public  :: Push to the public branch (you can change this if using a different branch)
     if %errorlevel% neq 0 (
         echo 🚨 Error pushing to GitHub. Please check your repository settings or network connection.
         pause
@@ -81,5 +104,25 @@ if %errorlevel% neq 0 (
     echo 🔄 No changes detected. No need to upload files.
 )
 
-pause
-exit /b 0
+:: -----------------------------
+:: STEP 7: Auto-Update the Server Files (Git Pull)
+:: -----------------------------
+:loop
+echo Checking for updates in the repository...
+cd /d "%SERVER_PATH%"
+
+:: Pull the latest changes from the public branch
+git pull origin public  :: Pull updates from the public branch
+if %errorlevel% neq 0 (
+    echo 🚨 Error pulling from GitHub. Please check the repository or your internet connection.
+    pause
+    exit /b 1
+)
+
+echo ✅ Server files updated successfully. Sleeping for 5 minutes...
+
+:: Wait for 5 minutes (300 seconds)
+timeout /t 300
+
+:: Repeat the process
+goto loop
