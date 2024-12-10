@@ -9,12 +9,12 @@
 :: -----------------------------
 :: STEP 1: Edit the GitHub Repository URL
 :: -----------------------------
-set REPO_URL=https://github.com/username/repository.git  :: Replace with YOUR GitHub repo URL
+set "REPO_URL=https://github.com/Mzanzi-Shores-RP/Mzanzi-Shores-RP-MSRP.git"  :: Replace with YOUR GitHub repo URL
 
 :: -----------------------------
 :: STEP 2: Edit the FiveM Server Folder Path
 :: -----------------------------
-set SERVER_PATH=C:\path\to\your\fivem\server  :: Replace with YOUR FiveM server folder path
+set "SERVER_PATH=F:\MSRP_test_server\txData\Mzanzi-Shores-RP-MSRP"  :: Replace with YOUR FiveM server folder path
 
 :: -----------------------------
 :: STEP 3: Check if Git is Installed
@@ -33,96 +33,45 @@ if %errorlevel% neq 0 (
 )
 
 :: -----------------------------
-:: STEP 4: Create Backup Folder if First Run
-:: -----------------------------
-set BACKUP_PATH=%SERVER_PATH%\Backup
-if not exist "%BACKUP_PATH%" (
-    echo 🚨 First time running the script, creating backup folder...
-    for /f "tokens=3" %%a in ('wmic logicaldisk get size^,caption ^| findstr /c:"\\"') do (
-        set DRIVE=%%a
-        goto :found_drive
-    )
-    :found_drive
-    echo Creating backup folder on %DRIVE%\Backup
-    mkdir "%DRIVE%\Backup"
-    echo Backing up server files...
-    xcopy "%SERVER_PATH%" "%DRIVE%\Backup" /E /H /C /I
-    if %errorlevel% neq 0 (
-        echo 🚨 Error creating backup. Please ensure you have write permissions on the drive.
-        pause
-        exit /b 1
-    )
-    echo ✅ Backup completed successfully.
-)
-
-:: -----------------------------
-:: STEP 5: Set Up the GitHub Repository Locally (Clone the Repo)
+:: STEP 4: Clone Repository if Not Cloned
 :: -----------------------------
 echo Checking if the repository is already cloned...
 cd /d "%SERVER_PATH%"
-
-:: Check if a .git folder exists (i.e., repo already initialized)
-if exist ".git" (
-    echo ✅ Git repository already exists, skipping clone.
-) else (
-    echo 🚨 Cloning GitHub repository...
-    git clone "%REPO_URL%" "%SERVER_PATH%"  :: Clone the repo into the server path
+if not exist ".git" (
+    echo 🚨 Cloning GitHub repository to the server folder...
+    git clone --branch public "%REPO_URL%" "%SERVER_PATH%"  :: Clone the specific branch
     if %errorlevel% neq 0 (
         echo 🚨 Error cloning the GitHub repository. Please check the repository URL or your internet connection.
         pause
         exit /b 1
     )
-)
-
-:: -----------------------------
-:: STEP 6: Upload the Current Server Files to GitHub
-:: -----------------------------
-echo Adding current server files to Git...
-git add .  :: Stage all files for commit
-
-:: Check if there are any changes
-git diff --exit-code >nul
-if %errorlevel% neq 0 (
-    echo 🚨 Changes detected, committing changes to GitHub...
-    git commit -m "Update FiveM server files"  :: Commit changes
-    if %errorlevel% neq 0 (
-        echo 🚨 Error committing the changes. Please ensure files are correctly staged.
-        pause
-        exit /b 1
-    )
-    echo ✅ Committed changes.
-
-    echo Pushing changes to GitHub...
-    git push origin public  :: Push to the public branch (you can change this if using a different branch)
-    if %errorlevel% neq 0 (
-        echo 🚨 Error pushing to GitHub. Please check your repository settings or network connection.
-        pause
-        exit /b 1
-    )
-    echo ✅ Changes pushed to GitHub!
+    echo ✅ Repository cloned successfully.
 ) else (
-    echo 🔄 No changes detected. No need to upload files.
+    echo ✅ Git repository already exists, skipping clone.
 )
 
 :: -----------------------------
-:: STEP 7: Auto-Update the Server Files (Git Pull)
+:: STEP 5: Auto-Update the Server Files (Git Pull)
 :: -----------------------------
 :loop
 echo Checking for updates in the repository...
 cd /d "%SERVER_PATH%"
 
-:: Pull the latest changes from the public branch
-git pull origin public  :: Pull updates from the public branch
+:: Fetch the latest updates silently
+git fetch origin public >nul 2>nul
+
+:: Force update the local branch to match the remote public branch
+git reset --hard origin/public >nul 2>nul
 if %errorlevel% neq 0 (
-    echo 🚨 Error pulling from GitHub. Please check the repository or your internet connection.
+    echo 🚨 Error updating server files. Please check the repository or your internet connection.
     pause
     exit /b 1
 )
 
-echo ✅ Server files updated successfully. Sleeping for 5 minutes...
+echo ✅ Server files updated successfully. Waiting for 30 seconds...
 
-:: Wait for 5 minutes (300 seconds)
-timeout /t 300
+:: Wait for 30 seconds
+timeout /t 30 /nobreak >nul
 
 :: Repeat the process
 goto loop
